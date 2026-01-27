@@ -1,6 +1,5 @@
 using JsonPatch.Restrict.Tests.Models;
 using Microsoft.AspNetCore.JsonPatch;
-using System;
 using Xunit;
 
 namespace JsonPatch.Restrict.Tests
@@ -71,6 +70,55 @@ namespace JsonPatch.Restrict.Tests
 
             Assert.Equal(1, dummy.Id);
             Assert.Equal("baseValue", dummy.Value);
+        }
+
+        [Fact]
+        public void ApplyPatchToChildProperty()
+        {
+            var oldValue = "oldValue";
+            var newValue = "newValue";
+            
+            var dummyWithChild = new DummyModelWithChild
+            {
+                Id = 1,
+                Child = new Child
+                {
+                    Value = oldValue,  
+                },
+            };
+            
+            var patchDocument = new JsonPatchDocument();
+            patchDocument.Replace("/Child/Value", newValue);
+            patchDocument.ApplyToWithRestrictions(dummyWithChild, "/Child/Value");
+            
+            Assert.Equal(1, dummyWithChild.Id);
+            Assert.Equal(newValue, dummyWithChild.Child.Value);
+        }
+
+        [Fact]
+        public void ApplyPatchToNestedChildProperty()
+        {
+            var oldValue = "oldValue";
+            var newValue = "newValue";
+
+            var dummy = new DummyMultiChild
+            {
+                Id = 1,
+                Child1 = new Child1
+                {
+                    Child2 = new Child2
+                    {
+                        Value  = oldValue,
+                    },
+                },
+            };
+            
+            var patchDocument = new JsonPatchDocument();
+            patchDocument.Replace("/Child1/Child2/Value", newValue);
+            patchDocument.ApplyToWithRestrictions(dummy, "/Child1/Child2/Value");
+            
+            Assert.Equal(1, dummy.Id);
+            Assert.Equal(newValue, dummy.Child1.Child2.Value);
         }
 
         private JsonPatchDocument GetPatchDocument()

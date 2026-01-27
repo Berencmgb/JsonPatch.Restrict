@@ -2,6 +2,7 @@
 using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace JsonPatch.Restrict
 {
@@ -24,22 +25,25 @@ namespace JsonPatch.Restrict
         /// <inheritdoc/>
         protected override bool TryGetJsonProperty(object target, IContractResolver contractResolver, string segment, out JsonProperty jsonProperty)
         {
-            if (!string.IsNullOrEmpty(segment) && contractResolver.ResolveContract(target.GetType()) is JsonObjectContract jsonObjectContract)
+            if (contractResolver.ResolveContract(target.GetType()) is JsonObjectContract jsonObjectContract)
             {
-                for (int i = 0; i < jsonObjectContract.Properties.Count; i++)
+                var pocoProperty = jsonObjectContract
+                    .Properties
+                    .FirstOrDefault(p => string.Equals(p.PropertyName, segment, StringComparison.OrdinalIgnoreCase));
+
+                if (pocoProperty != null &&
+                    _allowedProperties.Any(a =>
+                        a.Equals(pocoProperty.PropertyName, StringComparison.OrdinalIgnoreCase)
+                        || a.StartsWith($"{pocoProperty.PropertyName}/", StringComparison.OrdinalIgnoreCase)
+                        || a.EndsWith($"/{pocoProperty.PropertyName}", StringComparison.OrdinalIgnoreCase)
+                        || a.Contains($"/{pocoProperty.PropertyName}/",  StringComparison.OrdinalIgnoreCase)))
                 {
-                    var property = jsonObjectContract.Properties[i];
-
-                    if (string.Equals(property.PropertyName, segment, StringComparison.OrdinalIgnoreCase) && _allowedProperties.Contains(property.PropertyName))
-                    {
-                        jsonProperty = property;
-
-                        return true;
-                    }
+                    jsonProperty = pocoProperty;
+                    return true;
                 }
             }
 
-            jsonProperty = default!;
+            jsonProperty = null;
             return false;
         }
     }
